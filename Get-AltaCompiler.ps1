@@ -311,7 +311,7 @@ function Get-AltaCompiler {
     if ($Force) {
       $ExpandArchiveParameters["Force"] = [switch]$True
     }
-    [System.IO.FileSystemInfo[]]$EAFiles = Expand-Archive @ExpandArchiveParameters -LiteralPath $ArchivePath -PassThru
+    [System.IO.FileSystemInfo[]]$EAFiles = Microsoft.PowerShell.Archive\Expand-Archive @ExpandArchiveParameters -LiteralPath $ArchivePath -PassThru
     foreach ($EAFile in $EAFiles) {
       $ExtractedFiles += $EAFile.FullName
     }
