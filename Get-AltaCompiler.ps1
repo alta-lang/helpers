@@ -302,25 +302,50 @@ function Get-AltaCompiler {
     Write-Host "Extracting the compiler from the archive..."
   }
 
-  $ExpandArchiveParameters = @{
-    "DestinationPath" = $DestinationDirectory
-  }
-  if ($Force) {
-    $ExpandArchiveParameters["Force"] = [switch]$True
-  }
-  [System.IO.FileSystemInfo[]]$Files = Expand-Archive @ExpandArchiveParameters -LiteralPath $ArchivePath -PassThru
+  [string[]]$ExtractedFiles = @()
 
-  if ($Files.Length -gt 0) {
-    [string]$File = $Files[0].FullName
+  if ($IsWindows) {
+    $ExpandArchiveParameters = @{
+      "DestinationPath" = $DestinationDirectory
+    }
+    if ($Force) {
+      $ExpandArchiveParameters["Force"] = [switch]$True
+    }
+    [System.IO.FileSystemInfo[]]$EAFiles = Expand-Archive @ExpandArchiveParameters -LiteralPath $ArchivePath -PassThru
+    foreach ($EAFile in $EAFiles) {
+      $ExtractedFiles += $EAFile.FullName
+    }
+  } else {
+    [string]$UFiles = unzip -Z1 $ArchivePath
+
+    if ($UFiles.IndexOf("`n") -ne -1) {
+      $ExtractedFiles = $UFiles.Trim() -split "`n"
+    } else {
+      $ExtractedFiles = $UFiles.Trim() -split " "
+    }
+
+    for ($i = 0; $i -lt $ExtractedFiles.Length; ++$i) {
+      $ExtractedFiles[$i] = Join-Path -Path $DestinationDirectory -ChildPath $ExtractedFiles[$i]
+    }
+
+    if ($Force) {
+      $Null = unzip -n $ArchivePath -d $DestinationDirectory
+    } else {
+      $Null = unzip -o $ArchivePath -d $DestinationDirectory
+    }
+  }
+
+  if ($ExtractedFiles.Length -gt 0) {
+    [string]$File = $ExtractedFiles[0]
     [string]$BaseName = $File.Substring($DestinationDirectory.Length + 1)
     [string]$RemovableDirectoryName = $Null
     if ($BaseName.IndexOf([IO.Path]::DirectorySeparatorChar) -lt 0) {
       $RemovableDirectoryName = $BaseName
     } else {
-      if ($Files.Length -lt 2) {
+      if ($ExtractedFiles.Length -lt 2) {
         throw "Could not determine removable directory name!"
       }
-      $File = $Files[1].FullName
+      $File = $ExtractedFiles[1]
       $BaseName = $File.Substring($DestinationDirectory.Length + 1)
       $RemovableDirectoryName = $BaseName.Substring(0, $BaseName.IndexOf([IO.Path]::DirectorySeparatorChar))
     }
@@ -332,7 +357,12 @@ function Get-AltaCompiler {
     if ($Force) {
       $MoveItemParameters["Force"] = [switch]$True
     }
-    $Null = (Get-ChildItem -LiteralPath $RemovableDirectoryPath -Recurse | Move-Item @MoveItemParameters)
+
+    [string[]]$RemoveableDirectoryChildren = Get-ChildItem -LiteralPath $RemovableDirectoryPath -Name
+
+    foreach ($Child in $RemoveableDirectoryChildren) {
+      $Null = Move-Item -LiteralPath (Join-Path -Path $RemovableDirectoryPath -ChildPath $Child) @MoveItemParameters
+    }
 
     $Null = Remove-Item -LiteralPath $RemovableDirectoryPath
   }
