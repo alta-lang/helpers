@@ -106,8 +106,8 @@ function Get-AltaCompiler {
   )
 
   # parameter parsing
-  $DestinationDirectory = if (Split-Path -LiteralPath $DestinationDirectory -IsAbsolute) { $DestinationDirectory } else { Join-Path -Path (Get-Location) -ChildPath $DestinationDirectory }
-  $TemporaryDirectory = if (Split-Path -LiteralPath $TemporaryDirectory -IsAbsolute) { $TemporaryDirectory } else { Join-Path -Path (Get-Location) -ChildPath $TemporaryDirectory }
+  $DestinationDirectory = if (Split-Path -Path $DestinationDirectory -IsAbsolute) { $DestinationDirectory } else { Join-Path -Path (Get-Location) -ChildPath $DestinationDirectory }
+  $TemporaryDirectory = if (Split-Path -Path $TemporaryDirectory -IsAbsolute) { $TemporaryDirectory } else { Join-Path -Path (Get-Location) -ChildPath $TemporaryDirectory }
   $SystemName = $SystemName.ToLower()
   $ArchitectureName = $ArchitectureName.ToLower()
 
