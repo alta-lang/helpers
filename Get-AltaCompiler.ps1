@@ -106,8 +106,8 @@ function Get-AltaCompiler {
   )
 
   # parameter parsing
-  $DestinationDirectory = [IO.Path]::GetFullPath($DestinationDirectory)
-  $TemporaryDirectory = [IO.Path]::GetFullPath($TemporaryDirectory)
+  $DestinationDirectory = if (Test-Path -LiteralPath $DestinationDirectory -IsAbsolute) { $DestinationDirectory } else { Join-Path -Path (Get-Location) -ChildPath $DestinationDirectory }
+  $TemporaryDirectory = if (Test-Path -LiteralPath $TemporaryDirectory -IsAbsolute) { $TemporaryDirectory } else { Join-Path -Path (Get-Location) -ChildPath $TemporaryDirectory }
   $SystemName = $SystemName.ToLower()
   $ArchitectureName = $ArchitectureName.ToLower()
 
