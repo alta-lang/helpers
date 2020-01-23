@@ -253,7 +253,7 @@ function Get-AltaCompiler {
     $Content = (Get-Content -LiteralPath $VersionTextFilePath).Trim()
     if ($Content -eq "$Version-$SystemName-$ArchitectureName") {
       if (-not $Silent) {
-        Write-Output "Alta compiler in destination directory is already up to date (use the ""-Always"" switch to force it to be redownloaded)"
+        Write-Host "Alta compiler in destination directory is already up to date (use the ""-Always"" switch to force it to be redownloaded)"
       }
       if ($SystemName -eq "windows") {
         return Join-Path -Path $DestinationDirectory -ChildPath "altac.exe"
@@ -279,7 +279,7 @@ function Get-AltaCompiler {
   $DownloadURL += "download"
 
   if (-not $Silent) {
-    Write-Output "Downloading the Alta compiler for $FriendlySystemName ($FriendlyArchitectureName)..."
+    Write-Host "Downloading the Alta compiler for $FriendlySystemName ($FriendlyArchitectureName)..."
   }
 
   # download it!
@@ -299,7 +299,7 @@ function Get-AltaCompiler {
   }
 
   if (-not $Silent) {
-    Write-Output "Extracting the compiler from the archive..."
+    Write-Host "Extracting the compiler from the archive..."
   }
 
   $ExpandArchiveParameters = @{
