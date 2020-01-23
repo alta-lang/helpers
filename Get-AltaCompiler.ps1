@@ -106,6 +106,8 @@ function Get-AltaCompiler {
   )
 
   # parameter parsing
+  $DestinationDirectory = [IO.Path]::GetFullPath($DestinationDirectory)
+  $TemporaryDirectory = [IO.Path]::GetFullPath($TemporaryDirectory)
   $SystemName = $SystemName.ToLower()
   $ArchitectureName = $ArchitectureName.ToLower()
 
