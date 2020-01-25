@@ -78,7 +78,7 @@ Get-AltaCompiler -DestinationDirectory ../my-alta-compiler # extracts the compil
 Get-AltaCompiler -Force # overwrite any files already present
 
 .LINK
-https://github.com/alta-lang/alta
+https://github.com/alta-lang/helpers
 
 #>
 function Get-AltaCompiler {
