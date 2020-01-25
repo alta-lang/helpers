@@ -106,8 +106,8 @@ function Get-AltaCompiler {
   )
 
   # parameter parsing
-  $DestinationDirectory = [IO.Path]::GetFullPath($DestinationDirectory)
-  $TemporaryDirectory = [IO.Path]::GetFullPath($TemporaryDirectory)
+  $DestinationDirectory = if (Split-Path -Path $DestinationDirectory -IsAbsolute) { $DestinationDirectory } else { Join-Path -Path (Get-Location) -ChildPath $DestinationDirectory }
+  $TemporaryDirectory = if (Split-Path -Path $TemporaryDirectory -IsAbsolute) { $TemporaryDirectory } else { Join-Path -Path (Get-Location) -ChildPath $TemporaryDirectory }
   $SystemName = $SystemName.ToLower()
   $ArchitectureName = $ArchitectureName.ToLower()
 
@@ -253,7 +253,7 @@ function Get-AltaCompiler {
     $Content = (Get-Content -LiteralPath $VersionTextFilePath).Trim()
     if ($Content -eq "$Version-$SystemName-$ArchitectureName") {
       if (-not $Silent) {
-        Write-Output "Alta compiler in destination directory is already up to date (use the ""-Always"" switch to force it to be redownloaded)"
+        Write-Host "Alta compiler in destination directory is already up to date (use the ""-Always"" switch to force it to be redownloaded)"
       }
       if ($SystemName -eq "windows") {
         return Join-Path -Path $DestinationDirectory -ChildPath "altac.exe"
@@ -279,7 +279,7 @@ function Get-AltaCompiler {
   $DownloadURL += "download"
 
   if (-not $Silent) {
-    Write-Output "Downloading the Alta compiler for $FriendlySystemName ($FriendlyArchitectureName)..."
+    Write-Host "Downloading the Alta compiler for $FriendlySystemName ($FriendlyArchitectureName)..."
   }
 
   # download it!
@@ -299,28 +299,53 @@ function Get-AltaCompiler {
   }
 
   if (-not $Silent) {
-    Write-Output "Extracting the compiler from the archive..."
+    Write-Host "Extracting the compiler from the archive..."
   }
 
-  $ExpandArchiveParameters = @{
-    "DestinationPath" = $DestinationDirectory
-  }
-  if ($Force) {
-    $ExpandArchiveParameters["Force"] = [switch]$True
-  }
-  [System.IO.FileSystemInfo[]]$Files = Expand-Archive @ExpandArchiveParameters -LiteralPath $ArchivePath -PassThru
+  [string[]]$ExtractedFiles = @()
 
-  if ($Files.Length -gt 0) {
-    [string]$File = $Files[0].FullName
+  if ($IsWindows) {
+    $ExpandArchiveParameters = @{
+      "DestinationPath" = $DestinationDirectory
+    }
+    if ($Force) {
+      $ExpandArchiveParameters["Force"] = [switch]$True
+    }
+    [System.IO.FileSystemInfo[]]$EAFiles = Microsoft.PowerShell.Archive\Expand-Archive @ExpandArchiveParameters -LiteralPath $ArchivePath -PassThru
+    foreach ($EAFile in $EAFiles) {
+      $ExtractedFiles += $EAFile.FullName
+    }
+  } else {
+    [string]$UFiles = unzip -Z1 $ArchivePath
+
+    if ($UFiles.IndexOf("`n") -ne -1) {
+      $ExtractedFiles = $UFiles.Trim() -split "`n"
+    } else {
+      $ExtractedFiles = $UFiles.Trim() -split " "
+    }
+
+    for ($i = 0; $i -lt $ExtractedFiles.Length; ++$i) {
+      $ExtractedFiles[$i] = Join-Path -Path $DestinationDirectory -ChildPath $ExtractedFiles[$i]
+    }
+
+    if ($Force) {
+      $Null = unzip -n $ArchivePath -d $DestinationDirectory
+    } else {
+      $Null = unzip -o $ArchivePath -d $DestinationDirectory
+    }
+  }
+
+  if ($ExtractedFiles.Length -gt 0) {
+    [string]$File = $ExtractedFiles[0]
     [string]$BaseName = $File.Substring($DestinationDirectory.Length + 1)
     [string]$RemovableDirectoryName = $Null
     if ($BaseName.IndexOf([IO.Path]::DirectorySeparatorChar) -lt 0) {
       $RemovableDirectoryName = $BaseName
     } else {
-      if ($Files.Length -lt 2) {
+      if ($ExtractedFiles.Length -lt 2) {
         throw "Could not determine removable directory name!"
       }
-      $File = $Files[1].FullName
+      $File = $ExtractedFiles[1]
       $BaseName = $File.Substring($DestinationDirectory.Length + 1)
       $RemovableDirectoryName = $BaseName.Substring(0, $BaseName.IndexOf([IO.Path]::DirectorySeparatorChar))
     }
@@ -332,7 +357,12 @@ function Get-AltaCompiler {
     if ($Force) {
       $MoveItemParameters["Force"] = [switch]$True
     }
-    $Null = (Get-ChildItem -LiteralPath $RemovableDirectoryPath -Recurse | Move-Item @MoveItemParameters)
+
+    [string[]]$RemoveableDirectoryChildren = Get-ChildItem -LiteralPath $RemovableDirectoryPath -Name
+
+    foreach ($Child in $RemoveableDirectoryChildren) {
+      $Null = Move-Item -LiteralPath (Join-Path -Path $RemovableDirectoryPath -ChildPath $Child) @MoveItemParameters
+    }
 
     $Null = Remove-Item -LiteralPath $RemovableDirectoryPath
   }
